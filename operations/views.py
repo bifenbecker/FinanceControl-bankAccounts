@@ -95,6 +95,7 @@ class ListOperationsOfBill:
         return serializer.data, status.HTTP_200_OK, None
 
 
+
 # @all_methods_get_payload(APIView)
 class FilterOperationsView(APIView):
 
@@ -130,3 +131,4 @@ class FilterOperationsView(APIView):
         return Response(
             serializer.data
         )
+

@@ -1,6 +1,10 @@
 import base64
 import json
+<<<<<<< HEAD
 from typing import Optional
+=======
+from typing import Union, Optional
+>>>>>>> f21cdabea668e032b8579a56234852d4fbe6b27d
 
 from django.core.exceptions import ValidationError
 from rest_framework import status
@@ -14,7 +18,11 @@ from producer import logger
 HOST = 'http://docker.for.mac.localhost:10000'
 
 
+<<<<<<< HEAD
 def decode_base64(encoded_payload: Optional[str]) -> Optional[str]:
+=======
+def decode_base64(encoded_payload: Optional[str]) -> Union[str, None]:
+>>>>>>> f21cdabea668e032b8579a56234852d4fbe6b27d
     """Decode base64, padding being optional.
 
     :param data: Base64 data as an ASCII byte string
@@ -28,22 +36,31 @@ def decode_base64(encoded_payload: Optional[str]) -> Optional[str]:
         error = None
     except Exception as e:
         error = str(e)
+<<<<<<< HEAD
         logger(error)
+=======
+>>>>>>> f21cdabea668e032b8579a56234852d4fbe6b27d
 
     try:
         base64_bytes = base64.b64decode(payload_bytes + b'=' * (-len(payload_bytes) % 4))
         error = None
     except Exception as e:
         error = str(e)
+<<<<<<< HEAD
         logger(error)
+=======
+>>>>>>> f21cdabea668e032b8579a56234852d4fbe6b27d
 
     try:
         base64_bytes = base64.b64decode(payload_bytes + b'==')
         error = None
     except Exception as e:
         error = str(e)
+<<<<<<< HEAD
         logger(error)
         
+=======
+>>>>>>> f21cdabea668e032b8579a56234852d4fbe6b27d
     if not error:
         decoded_payload = base64_bytes.decode('ascii')
         return decoded_payload

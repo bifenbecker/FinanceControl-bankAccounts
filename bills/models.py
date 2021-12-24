@@ -45,19 +45,21 @@ class Bill(models.Model):
         self.save()
         return self.balance
 
+
     def add_operation(self, category: Optional[int], description: Optional[str] = "",
                       value: Optional[float] = 0.0, currency: Optional[str] = None,
                       isIncome: Optional[bool] = True) -> Optional[Operation]:
         """
-            Valiadte data and create operation
-            :param user_id: ID user
-            :param bill_uuid: UUID bill
-            :param category: Category of operation
-            :param description: Description
-            :param value: Value
-            :param isIncome:
-            :return: Operation
-            """
+        Valiadte data and create operation
+        :param user_id: ID user
+        :param bill_uuid: UUID bill
+        :param category: Category of operation
+        :param description: Description
+        :param value: Value
+        :param isIncome:
+        :return: Operation
+        """
+        
         category_db = None
         if category:
             category_db = CategoryToUser.objects.filter(id=category).first()
