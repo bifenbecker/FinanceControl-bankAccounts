@@ -1,10 +1,8 @@
 import base64
 import json
-<<<<<<< HEAD
-from typing import Optional
-=======
-from typing import Union, Optional
->>>>>>> f21cdabea668e032b8579a56234852d4fbe6b27d
+import re
+from typing import Optional, Union
+from datetime import datetime
 
 from django.core.exceptions import ValidationError
 from rest_framework import status
@@ -13,16 +11,18 @@ from rest_framework.response import Response
 from bills.models import Bill
 from operations.models import Operation, OperationToBill, CategoryToUser
 from operations.serializers import OperationSerializer
-from producer import logger
+from exceptions import ConvertDateException
+# from producer import logger
 
 HOST = 'http://docker.for.mac.localhost:10000'
 
 
-<<<<<<< HEAD
+class DecodeException(Exception):
+    pass
+
+
+
 def decode_base64(encoded_payload: Optional[str]) -> Optional[str]:
-=======
-def decode_base64(encoded_payload: Optional[str]) -> Union[str, None]:
->>>>>>> f21cdabea668e032b8579a56234852d4fbe6b27d
     """Decode base64, padding being optional.
 
     :param data: Base64 data as an ASCII byte string
@@ -36,36 +36,48 @@ def decode_base64(encoded_payload: Optional[str]) -> Union[str, None]:
         error = None
     except Exception as e:
         error = str(e)
-<<<<<<< HEAD
-        logger(error)
-=======
->>>>>>> f21cdabea668e032b8579a56234852d4fbe6b27d
 
     try:
         base64_bytes = base64.b64decode(payload_bytes + b'=' * (-len(payload_bytes) % 4))
         error = None
     except Exception as e:
         error = str(e)
-<<<<<<< HEAD
-        logger(error)
-=======
->>>>>>> f21cdabea668e032b8579a56234852d4fbe6b27d
+
 
     try:
         base64_bytes = base64.b64decode(payload_bytes + b'==')
         error = None
     except Exception as e:
         error = str(e)
-<<<<<<< HEAD
-        logger(error)
-        
-=======
->>>>>>> f21cdabea668e032b8579a56234852d4fbe6b27d
+
     if not error:
         decoded_payload = base64_bytes.decode('ascii')
         return decoded_payload
     else:
+        # logger(error)
         return None
+
+
+def convert_date(date: Union[str, int], pattern: Optional[str] = r'^\d{2}.\d{2}.\d{4}[ \d{2}:\d{2}:\d{2}]*$') -> Optional[datetime]:
+    """
+    Convert str datetime format DD.MM.YYYY HH:MM:SS
+    :param date: string or integer(UNIX) date
+    :return: datetime object
+    """
+    if isinstance(date, str):
+        if re.match(pattern, date.strip()):
+            date_part = date.split()[0]
+            time_part = date.split()[-1]
+            chunks = list(map(int, date_part.split(".")))
+            time = list(map(int, time_part.split(":")))
+            return datetime(year=chunks[-1], month=chunks[1], day=chunks[0], hour=time[0], minute=time[1], second=time[2])
+        else:
+            raise ConvertDateException('No valid pattern')
+
+    elif isinstance(date, int):
+        return datetime.utcfromtimestamp(date)
+    else:
+        raise ConvertDateException('No valid type of date')
 
 
 def get_payload(func):

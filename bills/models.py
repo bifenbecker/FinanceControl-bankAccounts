@@ -59,7 +59,7 @@ class Bill(models.Model):
         :param isIncome:
         :return: Operation
         """
-        
+
         category_db = None
         if category:
             category_db = CategoryToUser.objects.filter(id=category).first()
