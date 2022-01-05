@@ -27,7 +27,11 @@ IS_LOCAL = os.environ.get("IS_LOCAL", True)
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost *").split(" ")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-
+# region RABBITMQ
+RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'localhost')
+RABBITMQ_USER = os.environ.get('RABBITMQ_USER', 'localhost')
+RABBITMQ_PASSWORD = os.environ.get('RABBITMQ_PASSWORD', 'localhost')
+# endregion
 
 
 # Application definition
@@ -154,3 +158,15 @@ if not IS_LOCAL:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
+
+# region Currencies
+#
+# Must be similar in other services
+CURRENCY_CHOICES = [
+    ('USD', '$'),
+    ('EUR', '€'),
+    ('RUB', '₽'),
+    ('BTC', 'BTC')
+]
+
+# endregion

@@ -12,14 +12,12 @@ from bills.models import Bill
 from operations.models import Operation, OperationToBill, CategoryToUser
 from operations.serializers import OperationSerializer
 from exceptions import ConvertDateException
-# from producer import logger
+try:
+    from producer import logger
+except:
+    print("No connection to RABBIT_MQ")
 
 HOST = 'http://docker.for.mac.localhost:10000'
-
-
-class DecodeException(Exception):
-    pass
-
 
 
 def decode_base64(encoded_payload: Optional[str]) -> Optional[str]:
@@ -54,7 +52,10 @@ def decode_base64(encoded_payload: Optional[str]) -> Optional[str]:
         decoded_payload = base64_bytes.decode('ascii')
         return decoded_payload
     else:
-        # logger(error)
+        try:
+            logger(error)
+        except:
+            print("Message was not send")
         return None
 
 
@@ -67,12 +68,19 @@ def convert_date(date: Union[str, int], pattern: Optional[str] = r'^\d{2}.\d{2}.
     if isinstance(date, str):
         if re.match(pattern, date.strip()):
             date_part = date.split()[0]
-            time_part = date.split()[-1]
             chunks = list(map(int, date_part.split(".")))
-            time = list(map(int, time_part.split(":")))
-            return datetime(year=chunks[-1], month=chunks[1], day=chunks[0], hour=time[0], minute=time[1], second=time[2])
+            time_part = date.split()[-1]
+            if time_part != date_part:
+                try:
+                    time = list(map(int, time_part.split(":")))
+                    return datetime(year=chunks[-1], month=chunks[1], day=chunks[0], hour=time[0], minute=time[1],
+                                    second=time[2])
+                except Exception as e:
+                    raise ConvertDateException(str(e))
+            else:
+                return datetime(year=chunks[-1], month=chunks[1], day=chunks[0])
         else:
-            raise ConvertDateException('No valid pattern')
+            raise ConvertDateException('No valid pattern - (DD.MM.YYYY HH:MM:SS)')
 
     elif isinstance(date, int):
         return datetime.utcfromtimestamp(date)

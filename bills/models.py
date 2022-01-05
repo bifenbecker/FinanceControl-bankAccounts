@@ -45,6 +45,14 @@ class Bill(models.Model):
         self.save()
         return self.balance
 
+    def transfer(self, to_, value: Optional[float]):
+        if isinstance(to_, Bill):
+            self.balance -= value
+            to_.balance += value
+            self.save()
+            to_.save()
+        else:
+            raise TypeError("Argument must be Bill")
 
     def add_operation(self, category: Optional[int], description: Optional[str] = "",
                       value: Optional[float] = 0.0, currency: Optional[str] = None,
@@ -73,7 +81,7 @@ class Bill(models.Model):
             'value': value,
             'currency': currency
         })
-        serializer_operation.is_valid(raise_exception=True)
+
         if serializer_operation.is_valid():
             operation = serializer_operation.save(category=category_db)
             operation_to_bill = OperationToBill.objects.create(

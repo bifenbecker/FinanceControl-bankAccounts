@@ -1,16 +1,16 @@
 from typing import Optional
 
+from django.conf import settings
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from utils import all_methods_get_payload, get_operation, get_bill, get_user_id_from_payload, convert_date
-from .models import Operation, CategoryToUser, OperationToBill
 from bills.models import Bill
-from .serializers import OperationSerializer, CategorySerializer
-
 from exceptions import ValidateException, ConvertDateException
+from utils import all_methods_get_payload, get_operation, get_bill, get_user_id_from_payload, convert_date
+from .models import Operation, CategoryToUser
+from .serializers import OperationSerializer, CategorySerializer
 
 
 @all_methods_get_payload(viewsets.ViewSet)
@@ -81,7 +81,8 @@ class CategoryView:
     def create(self, request, *args, **kwargs):
         isIncome = request.data.get('isIncome', True)
 
-        serializer = CategorySerializer(data={"name": request.data.get("name", ""), "isIncome": isIncome, "user_id": kwargs['user_id']})
+        serializer = CategorySerializer(
+            data={"name": request.data.get("name", ""), "isIncome": isIncome, "user_id": kwargs['user_id']})
         if serializer.is_valid(raise_exception=False):
             category = serializer.save(user_id=kwargs['user_id'])
             return serializer.data, status.HTTP_200_OK, f'Category was added - Name: {category.name} to User: {kwargs["user_id"]}'
@@ -100,9 +101,22 @@ class ListOperationsOfBill:
         return serializer.data, status.HTTP_200_OK, None
 
 
-
 # @all_methods_get_payload(APIView)
 class FilterOperationsView(APIView):
+    """
+    API view filtering list of operations
+    :param {
+    categories: [],
+    date: str, int, - format DD.MM.YYYY HH:MM:SS
+    isIncome: bool, str,
+    value: {
+            value: str, float, int,
+            icc: bool, str,
+                },
+    bill: str,
+    currencies: []
+            }
+    """
 
     # @get_user_id_from_payload
     def post(self, request, *args, **kwargs):
@@ -112,9 +126,9 @@ class FilterOperationsView(APIView):
         self.date = request.data.get('date', None)
         self.isIncome = request.data.get('isIncome', None)
         self.value_dict = request.data.get('value', None)
-        self.bill = request.data.get('bill', None)
-        self.currencies = None
-        # todo Make currencies
+        self.bill = request.data.get('bill', None)  # todo Make filter bill
+        self.currencies = request.data.get('currencies', None)
+        self.description = request.data.get('description', None)
 
         try:
             self.validate(raise_exception=True)
@@ -125,9 +139,7 @@ class FilterOperationsView(APIView):
             return Response({
                 'msg': f"Incorrect value of {value} - {error}"
             }, status.HTTP_400_BAD_REQUEST)
-        if self.bill:
-            operations = OperationToBill.objects.filter(bill=self.bill)
-            # todo Make filter bill
+
         operations = Operation.objects.filter(category__user_id=self.user_id).all()
         operations = self.filter_operations(operations)
         serializer = OperationSerializer(operations, many=True)
@@ -143,11 +155,14 @@ class FilterOperationsView(APIView):
             operations = operations.filter(category__in=self.categories)
         if self.date:
             operations = operations.filter(date__gte=self.date)
-        if self.value:
-            if self.icc:
-                operations = operations.filter(value__gte=self.value)
-            else:
-                operations = operations.filter(value__lte=self.value)
+        if self.value_dict and self.value:
+            operations = operations.filter(value__gte=self.value) if self.icc else operations.filter(
+                value__lte=self.value)
+        if self.currencies:
+            operations = operations.filter(currency__in=self.currencies)
+
+        if self.description:
+            operations = operations.filter(description__search=self.description)
 
         return operations
 
@@ -158,6 +173,25 @@ class FilterOperationsView(APIView):
                 raise ValidateException(msg)
             else:
                 return False
+
+        if not self.categories and not self.date and not self.isIncome and not self.value_dict and not self.currencies\
+                and not self.description:
+            _return_result("Data|Empty data or incorrect name of params")
+
+        if self.description:
+            if not isinstance(self.description, str):
+                _return_result("Description|Description must be a string")
+
+        if self.currencies:
+            if isinstance(self.currencies, list):
+                available_currencies = [cur[0] for cur in settings.CURRENCY_CHOICES]
+                for cur in self.currencies:
+                    if cur.upper() not in available_currencies:
+                        _return_result(f"Currencies|Currency - {cur} is not available")
+                    else:
+                        self.currencies[self.currencies.index(cur)] = cur.upper()
+            else:
+                _return_result("Currencies|Currencies must be a list")
 
         if self.isIncome:
             if isinstance(self.isIncome, str):
@@ -186,7 +220,7 @@ class FilterOperationsView(APIView):
             try:
                 self.date = convert_date(self.date)
             except ConvertDateException as e:
-                _return_result(str(e))
+                _return_result(f"Date|{str(e)}")
 
         if self.value_dict:
             if not isinstance(self.value_dict, dict):
@@ -222,4 +256,3 @@ class FilterOperationsView(APIView):
                 _return_result("Bill|Incorrect type of bill")
 
         return True
-

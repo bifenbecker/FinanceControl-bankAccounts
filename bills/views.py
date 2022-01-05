@@ -63,5 +63,35 @@ class BillViewSet:
         bill = serialiser.save(user_id=kwargs['user_id'])
         return serialiser.data, status.HTTP_202_ACCEPTED, f'Create bill - {bill.id} User: {kwargs["user_id"]}'
 
+    @get_user_id_from_payload
+    def transfer(self, request, **kwargs):
+        if 'from_bill' not in request.data or 'to_bill' not in request.data or 'value' not in request.data:
+            return 'Empty data', status.HTTP_400_BAD_REQUEST, None
+
+        from_bill = request.data.pop('from_bill')
+        to_bill = request.data.pop('to_bill')
+        value = request.data.pop('value')
+
+        from_ = Bill.objects.filter(id=from_bill).first()
+        to_ = Bill.objects.filter(id=to_bill).first()
+        if isinstance(value, str) and value.isdigit():
+            value = float(value)
+        elif isinstance(value, float) or isinstance(value, int):
+            pass
+        else:
+            return 'Value must be a float', status.HTTP_400_BAD_REQUEST, None
+
+        if value < 0:
+            return 'Value must be positive', status.HTTP_400_BAD_REQUEST, None
+
+        if from_.user_id == kwargs['user_id'] and to_.user_id == kwargs['user_id']:
+            if from_ and to_:
+                from_.transfer(to_, value)
+                serializer = BillSerializer([from_, to_], many=True)
+                return serializer.data, status.HTTP_200_OK, f'Transfer {value} from {from_.uuid} to {to_.uuid}'
+            else:
+                return 'No such bills', status.HTTP_400_BAD_REQUEST, None
+        else:
+            return 'You don not have such bills', status.HTTP_400_BAD_REQUEST, None
 
 

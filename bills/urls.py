@@ -12,5 +12,8 @@ urlpatterns = [
     })),
     path('list', BillViewSet.as_view({
         'get': 'list'
+    })),
+    path('transfer', BillViewSet.as_view({
+        'post': 'transfer'
     }))
 ]
