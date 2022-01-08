@@ -1,7 +1,7 @@
 from django.urls import path
 
-from .views import OperationViewSet, CategoryView, CategoryListView, ListOperationsOfBill, FilterOperationsView
-
+from .views import OperationViewSet, CategoryView, CategoryListView, ListOperationsOfBill, FilterOperationsView, \
+    SearchView
 
 urlpatterns = [
     path('operation', OperationViewSet.as_view({
@@ -20,5 +20,6 @@ urlpatterns = [
     path('category', CategoryView.as_view({
         'post': 'create'
     })),
-    path('filter-operations', FilterOperationsView.as_view())
+    path('filter-operations', FilterOperationsView.as_view()),
+    path('search', SearchView.as_view())
 ]

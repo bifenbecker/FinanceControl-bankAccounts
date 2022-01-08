@@ -1,6 +1,8 @@
 from typing import Optional
 
 from django.conf import settings
+from django.db.models import Q
+
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -9,7 +11,7 @@ from rest_framework.views import APIView
 from bills.models import Bill
 from exceptions import ValidateException, ConvertDateException
 from utils import all_methods_get_payload, get_operation, get_bill, get_user_id_from_payload, convert_date
-from .models import Operation, CategoryToUser
+from .models import Operation, CategoryToUser, OperationToBill
 from .serializers import OperationSerializer, CategorySerializer
 
 
@@ -102,6 +104,52 @@ class ListOperationsOfBill:
 
 
 # @all_methods_get_payload(APIView)
+class SearchView(APIView):
+    """
+    API view searching operations or bills
+    :param text
+    """
+
+    def post(self, request, **kwargs):
+        # user_id = kwargs['user_id']
+        user_id = 1
+        try:
+            search_text = request.data.get('text')
+        except KeyError:
+            # return "Must bet a 'text' param", status.HTTP_400_BAD_REQUEST, None
+            return Response(
+                data={
+                    'msg': 'Must bet a "text" param'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if isinstance(search_text, str):
+            bills = Bill.objects.filter(user_id=user_id).all()
+            operations_ids = []
+            for bill in bills:
+                operations_ids += [operation.operation.id for operation in bill.operations.all()]
+
+            operations = Operation.objects.filter(id__in=operations_ids)
+            operations = operations.filter(
+                Q(category__name__icontains=search_text) | Q(description__icontains=search_text) | Q(
+                    value__icontains=search_text) | Q(currency__icontains=search_text) | Q(
+                    to_bill__bill__name__icontains=search_text) | Q(to_bill__bill__balance__icontains=search_text) | Q(
+                    date__icontains=search_text))
+            serializer = OperationSerializer(operations, many=True)
+            return Response(
+                serializer.data
+            )
+        else:
+            # return "Text must be a string", status.HTTP_400_BAD_REQUEST, None
+            return Response(
+                {
+                    'msg': 'Text must be a strings'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+# @all_methods_get_payload(APIView)
 class FilterOperationsView(APIView):
     """
     API view filtering list of operations
@@ -174,7 +222,7 @@ class FilterOperationsView(APIView):
             else:
                 return False
 
-        if not self.categories and not self.date and not self.isIncome and not self.value_dict and not self.currencies\
+        if not self.categories and not self.date and not self.isIncome and not self.value_dict and not self.currencies \
                 and not self.description:
             _return_result("Data|Empty data or incorrect name of params")
 

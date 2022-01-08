@@ -1,5 +1,7 @@
 import uuid as uuid
 
+from typing import Optional
+
 from django.db import models
 
 
@@ -21,6 +23,8 @@ class Operation(models.Model):
                                 blank=False)
     currency = models.CharField(max_length=3, default='USD')
 
+    def is_search_text(self, text: Optional[str]) -> Optional[bool]:
+        pass
 
 class OperationToBill(models.Model):
     operation = models.OneToOneField(Operation, on_delete=models.CASCADE, related_name='to_bill',

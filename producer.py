@@ -1,9 +1,9 @@
+import os
 import pika
-from django.conf import settings
 
-credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASSWORD)
+credentials = pika.PlainCredentials('admin', 'admin')
 
-params = pika.ConnectionParameters(settings.RABBITMQ_HOST, credentials=credentials)
+params = pika.ConnectionParameters(os.environ.get('RABBITMQ_HOST', 'localhost'), credentials=credentials)
 
 connection = pika.BlockingConnection(params)
 
