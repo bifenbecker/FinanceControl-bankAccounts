@@ -103,26 +103,20 @@ class ListOperationsOfBill:
         return serializer.data, status.HTTP_200_OK, None
 
 
-# @all_methods_get_payload(APIView)
-class SearchView(APIView):
+@all_methods_get_payload(APIView)
+class SearchView:
     """
     API view searching operations or bills
     :param text
     """
 
+    @get_user_id_from_payload
     def post(self, request, **kwargs):
-        # user_id = kwargs['user_id']
-        user_id = 1
+        user_id = kwargs['user_id']
         try:
             search_text = request.data.get('text')
         except KeyError:
-            # return "Must bet a 'text' param", status.HTTP_400_BAD_REQUEST, None
-            return Response(
-                data={
-                    'msg': 'Must bet a "text" param'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return "Must bet a 'text' param", status.HTTP_400_BAD_REQUEST, None
         if isinstance(search_text, str):
             bills = Bill.objects.filter(user_id=user_id).all()
             operations_ids = []
@@ -136,21 +130,13 @@ class SearchView(APIView):
                     to_bill__bill__name__icontains=search_text) | Q(to_bill__bill__balance__icontains=search_text) | Q(
                     date__icontains=search_text))
             serializer = OperationSerializer(operations, many=True)
-            return Response(
-                serializer.data
-            )
+            return serializer.data, status.HTTP_200_OK, f'User - {user_id} search - {search_text}'
         else:
-            # return "Text must be a string", status.HTTP_400_BAD_REQUEST, None
-            return Response(
-                {
-                    'msg': 'Text must be a strings'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return "Text must be a string", status.HTTP_400_BAD_REQUEST, None
 
 
-# @all_methods_get_payload(APIView)
-class FilterOperationsView(APIView):
+@all_methods_get_payload(APIView)
+class FilterOperationsView:
     """
     API view filtering list of operations
     :param {
@@ -166,10 +152,9 @@ class FilterOperationsView(APIView):
             }
     """
 
-    # @get_user_id_from_payload
+    @get_user_id_from_payload
     def post(self, request, *args, **kwargs):
-        # user_id = kwargs['user_id']
-        self.user_id = 5
+        self.user_id = kwargs['user_id']
         self.categories = request.data.get('category', None)
         self.date = request.data.get('date', None)
         self.isIncome = request.data.get('isIncome', None)
@@ -184,32 +169,28 @@ class FilterOperationsView(APIView):
             msg = str(e)
             value = msg.split("|")[0]
             error = msg.split("|")[-1]
-            return Response({
-                'msg': f"Incorrect value of {value} - {error}"
-            }, status.HTTP_400_BAD_REQUEST)
+            return f"Incorrect value of {value} - {error}", status.HTTP_400_BAD_REQUEST, None
 
         operations = Operation.objects.filter(category__user_id=self.user_id).all()
         operations = self.filter_operations(operations)
         serializer = OperationSerializer(operations, many=True)
-        return Response(
-            serializer.data
-        )
+        return serializer.data, status.HTTP_200_OK, None
 
     def filter_operations(self, operations):
 
-        if self.isIncome:
+        if self.isIncome != None:
             operations = operations.filter(isIncome=self.isIncome)
-        if self.categories:
+        if self.categories != None:
             operations = operations.filter(category__in=self.categories)
-        if self.date:
+        if self.date != None:
             operations = operations.filter(date__gte=self.date)
-        if self.value_dict and self.value:
+        if self.value_dict != None and self.value != None:
             operations = operations.filter(value__gte=self.value) if self.icc else operations.filter(
                 value__lte=self.value)
-        if self.currencies:
+        if self.currencies != None:
             operations = operations.filter(currency__in=self.currencies)
 
-        if self.description:
+        if self.description != None:
             operations = operations.filter(description__search=self.description)
 
         return operations
@@ -222,26 +203,29 @@ class FilterOperationsView(APIView):
             else:
                 return False
 
-        if not self.categories and not self.date and not self.isIncome and not self.value_dict and not self.currencies \
-                and not self.description:
+        if self.categories == None and self.date == None and self.isIncome == None and self.value_dict == None and self.currencies == None \
+                and self.description == None:
             _return_result("Data|Empty data or incorrect name of params")
 
         if self.description:
             if not isinstance(self.description, str):
                 _return_result("Description|Description must be a string")
 
-        if self.currencies:
+        if self.currencies != None:
             if isinstance(self.currencies, list):
-                available_currencies = [cur[0] for cur in settings.CURRENCY_CHOICES]
-                for cur in self.currencies:
-                    if cur.upper() not in available_currencies:
-                        _return_result(f"Currencies|Currency - {cur} is not available")
-                    else:
-                        self.currencies[self.currencies.index(cur)] = cur.upper()
+                if len(self.currencies) == 0:
+                    self.currencies = None
+                else:
+                    available_currencies = [cur[0] for cur in settings.CURRENCY_CHOICES]
+                    for cur in self.currencies:
+                        if cur.upper() not in available_currencies:
+                            _return_result(f"Currencies|Currency - {cur} is not available")
+                        else:
+                            self.currencies[self.currencies.index(cur)] = cur.upper()
             else:
                 _return_result("Currencies|Currencies must be a list")
 
-        if self.isIncome:
+        if self.isIncome != None:
             if isinstance(self.isIncome, str):
                 if self.isIncome in ['True', 'true']:
                     self.isIncome = True
@@ -253,7 +237,7 @@ class FilterOperationsView(APIView):
             if not isinstance(self.isIncome, bool):
                 _return_result(f"isIncome|{self.isIncome}")
 
-        if self.categories:
+        if self.categories != None:
             if isinstance(self.categories, list):
 
                 if self.isIncome:
@@ -264,37 +248,42 @@ class FilterOperationsView(APIView):
             else:
                 _return_result("Category|Category must be a list")
 
-        if self.date:
+        if self.date != None:
             try:
                 self.date = convert_date(self.date)
             except ConvertDateException as e:
                 _return_result(f"Date|{str(e)}")
 
-        if self.value_dict:
+        if self.value_dict != None:
             if not isinstance(self.value_dict, dict):
                 _return_result("Value|Value must be a dictionary")
-            if 'value' not in self.value_dict and 'icc' not in self.value_dict:
-                _return_result("Value|Key 'value' or 'icc' not in dictionary")
-
-            self.icc = self.value_dict['icc']
-            self.value = self.value_dict['value']
-            if isinstance(self.icc, str):
-                if self.icc in ["True", 'true']:
-                    self.icc = True
-                elif self.icc in ["False", "false"]:
-                    self.icc = False
-                else:
-                    _return_result("Value|Key 'icc' must be a boolean")
-            elif not isinstance(self.icc, bool):
-                _return_result("Value|Key 'icc' must be a boolean")
-            if isinstance(self.value, str) and self.value.isdigit():
-                self.value = float(self.value)
-            elif isinstance(self.value, float) or isinstance(self.value, int):
-                pass
             else:
-                _return_result("Value|Incorrect type of value")
+                if len(self.value_dict) == 0:
+                    self.value_dict = None
+                    self.value = None
+                else:
+                    if 'value' not in self.value_dict and 'icc' not in self.value_dict:
+                        _return_result("Value|Key 'value' or 'icc' not in dictionary")
 
-        if self.bill:
+                    self.icc = self.value_dict['icc']
+                    self.value = self.value_dict['value']
+                    if isinstance(self.icc, str):
+                        if self.icc in ["True", 'true']:
+                            self.icc = True
+                        elif self.icc in ["False", "false"]:
+                            self.icc = False
+                        else:
+                            _return_result("Value|Key 'icc' must be a boolean")
+                    elif not isinstance(self.icc, bool):
+                        _return_result("Value|Key 'icc' must be a boolean")
+                    if isinstance(self.value, str) and self.value.isdigit():
+                        self.value = float(self.value)
+                    elif isinstance(self.value, float) or isinstance(self.value, int):
+                        pass
+                    else:
+                        _return_result("Value|Incorrect type of value")
+
+        if self.bill != None:
             if isinstance(self.bill, str):
                 name = self.bill
                 self.bill = Bill.objects.filter(name=name, user_id=self.user_id).first()
