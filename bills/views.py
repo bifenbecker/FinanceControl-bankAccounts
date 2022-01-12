@@ -72,8 +72,8 @@ class BillViewSet:
         to_bill = request.data.pop('to_bill')
         value = request.data.pop('value')
 
-        from_ = Bill.objects.filter(id=from_bill).first()
-        to_ = Bill.objects.filter(id=to_bill).first()
+        from_ = Bill.objects.filter(uuid=from_bill).first()
+        to_ = Bill.objects.filter(uuid=to_bill).first()
         if isinstance(value, str) and value.isdigit():
             value = float(value)
         elif isinstance(value, float) or isinstance(value, int):
@@ -86,7 +86,13 @@ class BillViewSet:
 
         if from_.user_id == kwargs['user_id'] and to_.user_id == kwargs['user_id']:
             if from_ and to_:
-                from_.transfer(to_, value)
+                try:
+                    from_.transfer(to_, value)
+                except TypeError as e:
+                    return str(e), status.HTTP_400_BAD_REQUEST, str(e)
+                except Exception as e:
+                    return str(e), status.HTTP_400_BAD_REQUEST, str(e)
+
                 serializer = BillSerializer([from_, to_], many=True)
                 return serializer.data, status.HTTP_200_OK, f'Transfer {value} from {from_.uuid} to {to_.uuid}'
             else:

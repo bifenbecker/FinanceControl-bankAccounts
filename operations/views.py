@@ -171,7 +171,12 @@ class FilterOperationsView:
             error = msg.split("|")[-1]
             return f"Incorrect value of {value} - {error}", status.HTTP_400_BAD_REQUEST, None
 
-        operations = Operation.objects.filter(category__user_id=self.user_id).all()
+        bills = Bill.objects.filter(user_id=self.user_id).all()
+        operations_ids = []
+        for bill in bills:
+            operations_ids += [operation.operation.id for operation in bill.operations.all()]
+
+        operations = Operation.objects.filter(id__in=operations_ids)
         operations = self.filter_operations(operations)
         serializer = OperationSerializer(operations, many=True)
         return serializer.data, status.HTTP_200_OK, None

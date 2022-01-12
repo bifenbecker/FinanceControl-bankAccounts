@@ -12,10 +12,11 @@ from bills.models import Bill
 from operations.models import Operation, OperationToBill, CategoryToUser
 from operations.serializers import OperationSerializer
 from exceptions import ConvertDateException
+
 try:
-    from producer import logger
+    from .producer import logger
 except:
-    print("No connection to RABBIT_MQ")
+    print(f"[DEBUG] - {datetime.utcnow()} - [ERROR] - No connection to RABBIT_MQ")
 
 HOST = 'http://docker.for.mac.localhost:10000'
 

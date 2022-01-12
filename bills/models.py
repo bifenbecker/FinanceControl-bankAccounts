@@ -1,3 +1,4 @@
+import decimal
 import uuid as uuid
 from typing import Optional
 
@@ -47,8 +48,14 @@ class Bill(models.Model):
 
     def transfer(self, to_, value: Optional[float]):
         if isinstance(to_, Bill):
-            self.balance -= value
-            to_.balance += value
+            self.balance -= decimal.Decimal(value)
+            converter = CurrencyRates()
+            converter_btc = BtcConverter()
+            if to_.currency == 'BTC':
+                converted_value = converter_btc.convert_to_btc(value, self.currency)
+            else:
+                converted_value = converter.convert(to_.currency, self.currency, value)
+            to_.balance += decimal.Decimal(converted_value)
             self.save()
             to_.save()
         else:
