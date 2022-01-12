@@ -1,7 +1,5 @@
 import uuid as uuid
 
-from typing import Optional
-
 from django.db import models
 
 
@@ -23,8 +21,19 @@ class Operation(models.Model):
                                 blank=False)
     currency = models.CharField(max_length=3, default='USD')
 
-    def is_search_text(self, text: Optional[str]) -> Optional[bool]:
-        pass
+
+class TransferOperation(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_date = models.DateField(auto_now_add=True)
+    value_from = models.DecimalField(default=0.0, max_digits=9, decimal_places=2,
+                                     verbose_name="Value of transfer for currency from bill",
+                                     blank=False)
+    value_to = models.DecimalField(default=0.0, max_digits=9, decimal_places=2,
+                                   verbose_name="Value of transfer for currency to bill",
+                                   blank=False)
+    from_bill = models.ForeignKey('bills.Bill', on_delete=models.CASCADE, related_name='transfers_from')
+    to_bill = models.ForeignKey('bills.Bill', on_delete=models.CASCADE, related_name='transfers_to')
+
 
 class OperationToBill(models.Model):
     operation = models.OneToOneField(Operation, on_delete=models.CASCADE, related_name='to_bill',

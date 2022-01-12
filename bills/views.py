@@ -4,6 +4,7 @@ from rest_framework import viewsets
 from .models import Bill
 from .serializers import BillSerializer
 from utils import all_methods_get_payload, get_bill, get_user_id_from_payload
+from .utils import convert_value
 
 
 @all_methods_get_payload(viewsets.ViewSet)
@@ -63,14 +64,16 @@ class BillViewSet:
         bill = serialiser.save(user_id=kwargs['user_id'])
         return serialiser.data, status.HTTP_202_ACCEPTED, f'Create bill - {bill.id} User: {kwargs["user_id"]}'
 
-    @get_user_id_from_payload
     def transfer(self, request, **kwargs):
+        decoded_payload = kwargs['decoded_payload']
+        user_id = decoded_payload['id']
         if 'from_bill' not in request.data or 'to_bill' not in request.data or 'value' not in request.data:
             return 'Empty data', status.HTTP_400_BAD_REQUEST, None
 
         from_bill = request.data.pop('from_bill')
         to_bill = request.data.pop('to_bill')
         value = request.data.pop('value')
+
 
         from_ = Bill.objects.filter(uuid=from_bill).first()
         to_ = Bill.objects.filter(uuid=to_bill).first()
@@ -84,10 +87,11 @@ class BillViewSet:
         if value < 0:
             return 'Value must be positive', status.HTTP_400_BAD_REQUEST, None
 
-        if from_.user_id == kwargs['user_id'] and to_.user_id == kwargs['user_id']:
+        if from_.user_id == user_id and to_.user_id == user_id:
             if from_ and to_:
                 try:
-                    from_.transfer(to_, value)
+                    converted_value = convert_value(value, decoded_payload['settings']['currency'], from_.currency)
+                    from_.transfer(to_, converted_value)
                 except TypeError as e:
                     return str(e), status.HTTP_400_BAD_REQUEST, str(e)
                 except Exception as e:

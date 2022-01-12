@@ -5,11 +5,13 @@ from typing import Optional
 from django.db import models
 from django.core.exceptions import ObjectDoesNotExist
 
-from operations.models import Operation, OperationToBill, CategoryToUser
+from operations.models import Operation, OperationToBill, CategoryToUser, TransferOperation
 from operations.serializers import OperationSerializer
 
 from forex_python.converter import CurrencyRates
 from forex_python.bitcoin import BtcConverter
+
+from .utils import convert_value
 
 
 class Bill(models.Model):
@@ -24,6 +26,8 @@ class Bill(models.Model):
 
     def update_balance(self):
         operations = [operation_to_bill.operation for operation_to_bill in self.operations.all()]
+        transfers_from = self.transfers_from.all()
+        transfers_to = self.transfers_to.all()
         start_balance = self.start_balance
         for operation in operations:
             converter = CurrencyRates()
@@ -42,22 +46,25 @@ class Bill(models.Model):
                 start_balance += converted_value
             else:
                 start_balance -= converted_value
+        for transfer in transfers_from:
+            start_balance -= transfer.value_from
+        for transfer in transfers_to:
+            start_balance += transfer.value_to
         self.balance = start_balance
         self.save()
         return self.balance
 
     def transfer(self, to_, value: Optional[float]):
         if isinstance(to_, Bill):
-            self.balance -= decimal.Decimal(value)
-            converter = CurrencyRates()
-            converter_btc = BtcConverter()
-            if to_.currency == 'BTC':
-                converted_value = converter_btc.convert_to_btc(value, self.currency)
-            else:
-                converted_value = converter.convert(to_.currency, self.currency, value)
-            to_.balance += decimal.Decimal(converted_value)
-            self.save()
-            to_.save()
+            converted_value = convert_value(value, self.currency, to_.currency)
+            transfer_operation = TransferOperation.objects.create(
+                value_from=value,
+                value_to=converted_value,
+                from_bill=self,
+                to_bill=to_
+            )
+            self.update_balance()
+            to_.update_balance()
         else:
             raise TypeError("Argument must be Bill")
 

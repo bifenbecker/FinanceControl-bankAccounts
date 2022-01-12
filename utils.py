@@ -10,7 +10,6 @@ from rest_framework.response import Response
 
 from bills.models import Bill
 from operations.models import Operation, OperationToBill, CategoryToUser
-from operations.serializers import OperationSerializer
 from exceptions import ConvertDateException
 
 try:

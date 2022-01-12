@@ -147,7 +147,7 @@ class FilterOperationsView:
             value: str, float, int,
             icc: bool, str,
                 },
-    bill: str,
+    bills: [uuid],
     currencies: []
             }
     """
@@ -159,7 +159,7 @@ class FilterOperationsView:
         self.date = request.data.get('date', None)
         self.isIncome = request.data.get('isIncome', None)
         self.value_dict = request.data.get('value', None)
-        self.bill = request.data.get('bill', None)  # todo Make filter bill
+        self.bills = request.data.get('bills', None)  # todo Make filter bill
         self.currencies = request.data.get('currencies', None)
         self.description = request.data.get('description', None)
 
@@ -171,7 +171,10 @@ class FilterOperationsView:
             error = msg.split("|")[-1]
             return f"Incorrect value of {value} - {error}", status.HTTP_400_BAD_REQUEST, None
 
-        bills = Bill.objects.filter(user_id=self.user_id).all()
+        if self.bills != None:
+            bills = Bill.objects.filter(user_id=self.user_id, uuid__in=self.bills).all()
+        else:
+            bills = Bill.objects.filter(user_id=self.user_id).all()
         operations_ids = []
         for bill in bills:
             operations_ids += [operation.operation.id for operation in bill.operations.all()]
@@ -288,13 +291,20 @@ class FilterOperationsView:
                     else:
                         _return_result("Value|Incorrect type of value")
 
-        if self.bill != None:
-            if isinstance(self.bill, str):
-                name = self.bill
-                self.bill = Bill.objects.filter(name=name, user_id=self.user_id).first()
-                if not self.bill:
-                    _return_result(f"Bill|No such bill name - {name}")
+        if self.bills != None:
+            if isinstance(self.bills, list):
+                if len(self.bills) > 0:
+                    clear_bills = []
+                    for bill_ in self.bills:
+                        bill = Bill.objects.filter(uuid=bill_, user_id=self.user_id).first()
+                        if bill:
+                            clear_bills.append(bill)
+
+                    if len(clear_bills) == 0:
+                        _return_result("Bill|Incorrect uuid of bills")
+                else:
+                    self.bills = None
             else:
-                _return_result("Bill|Incorrect type of bill")
+                _return_result("Bill|Incorrect type of bill, must be a list")
 
         return True
