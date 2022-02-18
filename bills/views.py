@@ -1,5 +1,6 @@
 from rest_framework import status
 from rest_framework import viewsets
+from rest_framework import serializers
 
 from .models import Bill
 from .serializers import BillSerializer
@@ -38,8 +39,8 @@ class BillViewSet:
         serializer = BillSerializer(instance=bill)
         try:
             serializer.update(bill, new_bill_data)
-        except:
-            return 'Error. No update bill', status.HTTP_400_BAD_REQUEST, f'Bill - {bill.id} was not updated'
+        except serializers.ValidationError as e:
+            return f'Error. No update bill - ({str(e)})', status.HTTP_400_BAD_REQUEST, f'Bill - {bill.id} was not updated'
         return serializer.data, status.HTTP_202_ACCEPTED, f'Bill - {bill.id} was updated'
 
     @get_bill
@@ -48,8 +49,10 @@ class BillViewSet:
         Delete bank
         """
         bill = kwargs['bill']
+        for operation_to_bank in bill.operations.all():
+            operation_to_bank.delete()
         bill.delete()
-        return {'msg': 'Bill was deleted'}, status.HTTP_202_ACCEPTED, f'Bill - {bill.id} was deleted'
+        return {'msg': 'Bank was deleted'}, status.HTTP_202_ACCEPTED, f'Bank - {bill.id} was deleted'
 
     @get_user_id_from_payload
     def create(self, request, **kwargs):
