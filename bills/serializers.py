@@ -38,6 +38,6 @@ class BillSerializer(serializers.ModelSerializer):
         if len(Bill.objects.filter(user_id=user_id, name=name)) >= 1:
             raise serializers.ValidationError('Name must be unique')
 
-        instance = self.Meta.model(**validated_data)
+        instance = Bill(**validated_data)
         instance.save()
         return instance

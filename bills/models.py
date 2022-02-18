@@ -1,7 +1,8 @@
 import uuid as uuid
-from typing import Optional, Union
+from typing import Optional
 
 from django.db import models
+from django.core.exceptions import ObjectDoesNotExist
 
 from operations.models import Operation, OperationToBill, CategoryToUser
 from operations.serializers import OperationSerializer
@@ -44,26 +45,26 @@ class Bill(models.Model):
         self.save()
         return self.balance
 
-    def add_operation(self, category: Union[int, None], description: Optional[str] = "",
-                      value: Optional[float] = 0.0, currency: Union[str, None] = None,
+
+    def add_operation(self, category: Optional[int], description: Optional[str] = "",
+                      value: Optional[float] = 0.0, currency: Optional[str] = None,
                       isIncome: Optional[bool] = True) -> Optional[Operation]:
         """
-            Valiadte data and create operation
-            :param user_id: ID user
-            :param bill_uuid: UUID bill
-            :param category: Category of operation
-            :param description: Description
-            :param value: Value
-            :param isIncome:
-            :return: Operation
-            """
-        print("ADD: ", currency)
+        Valiadte data and create operation
+        :param user_id: ID user
+        :param bill_uuid: UUID bill
+        :param category: Category of operation
+        :param description: Description
+        :param value: Value
+        :param isIncome:
+        :return: Operation
+        """
+        
+        category_db = None
         if category:
-            Category = CategoryToUser.objects.filter(id=category).first()
-            if not Category:
-                raise Exception("No such category")
-        else:
-            Category = None
+            category_db = CategoryToUser.objects.filter(id=category).first()
+            if not category_db:
+                raise ObjectDoesNotExist("No such category")
 
         serializer_operation = OperationSerializer(data={
             'user_id': self.user_id,
@@ -74,7 +75,7 @@ class Bill(models.Model):
         })
         serializer_operation.is_valid(raise_exception=True)
         if serializer_operation.is_valid():
-            operation = serializer_operation.save(category=Category)
+            operation = serializer_operation.save(category=category_db)
             operation_to_bill = OperationToBill.objects.create(
                 operation=operation,
                 bill=self

@@ -12,7 +12,7 @@ class CategoryToUser(models.Model):
 class Operation(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     category = models.ForeignKey(CategoryToUser, on_delete=models.SET_NULL, related_name='operations',
-                                 verbose_name='Category', blank=True, default=None, null=True)
+                                 verbose_name='Category', blank=False, null=True)
     description = models.CharField(blank=True, default=None, null=True, max_length=255,
                                    verbose_name='Description of operation')
     date = models.DateField(auto_now_add=True)

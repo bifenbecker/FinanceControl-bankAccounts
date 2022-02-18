@@ -93,3 +93,42 @@ class ListOperationsOfBill:
         operations = [operation_to_bill.operation for operation_to_bill in bill.operations.all()]
         serializer = OperationSerializer(operations, many=True)
         return serializer.data, status.HTTP_200_OK, None
+
+
+
+# @all_methods_get_payload(APIView)
+class FilterOperationsView(APIView):
+
+    # @get_user_id_from_payload
+    def post(self, request, *args, **kwargs):
+        # user_id = kwargs['user_id']
+        user_id = 5
+        category = request.data.get('category', None)
+        date = request.data.get('date', None)
+        isIncome = request.data.get('isIncome', None)
+        value = request.data.get('value', None)
+
+        operations = Operation.objects.filter(category__user_id=user_id).all()
+        if category:
+            operations = operations.filter(category=category)
+        if date:
+            operations = operations.filter(date=date)
+        if isIncome:
+            if not isinstance(isIncome, bool):
+                return Response({
+                    'msg': 'Incorrect value of "isIncome"'
+                })
+            operations = operations.filter(isIncome=isIncome)
+        if value:
+            if isinstance(value, str):
+                if not value.isdigit():
+                    return Response({
+                        'msg': 'Incorrect value of "value"'
+                    })
+                value = float(value)
+            operations = operations.filter(value=value)
+        serializer = OperationSerializer(operations, many=True)
+        return Response(
+            serializer.data
+        )
+

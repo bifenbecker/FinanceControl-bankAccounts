@@ -13,7 +13,7 @@ class BillViewSet:
     @get_user_id_from_payload
     def list(self, request, **kwargs):
         """
-        List banks
+        List bills
         """
 
         user_bills = Bill.objects.filter(user_id=kwargs['user_id']).all()
@@ -23,7 +23,7 @@ class BillViewSet:
     @get_bill
     def retrieve(self, request, **kwargs):
         """
-        Get bank
+        Get bill
         """
         serializer = BillSerializer(kwargs['bill'])
         return serializer.data, status.HTTP_200_OK, None
@@ -31,7 +31,7 @@ class BillViewSet:
     @get_bill
     def update(self, request, **kwargs):
         """
-        Update bank
+        Update bill
         """
         new_bill_data = request.data
         new_bill_data['user_id'] = kwargs['user_id']
@@ -46,7 +46,7 @@ class BillViewSet:
     @get_bill
     def destroy(self, request, **kwargs):
         """
-        Delete bank
+        Delete bill
         """
         bill = kwargs['bill']
         for operation_to_bank in bill.operations.all():
@@ -57,7 +57,7 @@ class BillViewSet:
     @get_user_id_from_payload
     def create(self, request, **kwargs):
         """
-        Create bank
+        Create bill
         """
         bill_data = request.data
         bill_data.update({'user_id': kwargs['user_id'], 'currency': kwargs['decoded_payload']['settings']['currency']})
