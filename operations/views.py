@@ -17,6 +17,7 @@ from .serializers import OperationSerializer, CategorySerializer
 
 @all_methods_get_payload(viewsets.ViewSet)
 class OperationViewSet:
+
     @get_user_id_from_payload
     def list(self, request, *args, **kwargs):
         operations = Operation.objects.filter(category__user_id=kwargs['user_id']).all()
@@ -46,7 +47,6 @@ class OperationViewSet:
 
     @get_operation
     def destroy(self, request, *args, **kwargs):
-        # todo: Bad deleting
         operation = kwargs['operation']
         operation.delete()
         bill = operation.to_bill.bill
